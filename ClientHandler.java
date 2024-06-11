@@ -3,38 +3,20 @@ import java.net.Socket;
 
 public class ClientHandler extends Thread {
     private final Socket socket;
-    private final String quitCommand;
-
-    public ClientHandler(Socket socket, String quitCommand) {
+    private final Server server ;
+    public ClientHandler(Socket socket, Server server) {
         this.socket = socket;
-        this.quitCommand = quitCommand;
+        this.server = server;
     }
-
-    public void run() {
-        try {
-            BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-            while (true) {
-                String line = br.readLine();
-                if (line.equals(quitCommand)) {
-                    socket.close();
-                    break;
-                }
-                bw.write(process(line) + System.lineSeparator());
-                bw.flush();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
+    public void run() { try {
+        BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())); while (true) {
+            String line = br.readLine();
+            if (line.equals( server.getQuitCommand() )) {
                 socket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    protected String process(String line) {
-        return "";
-    }
+                break; }
+            bw.write(server. process(line) + System.lineSeparator());
+            bw.flush(); }
+    } catch (IOException e) { /* ... */
+    } finally { /* ... */ } }
 }
