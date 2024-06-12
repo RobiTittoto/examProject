@@ -1,4 +1,5 @@
 import java.util.Arrays;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -125,6 +126,8 @@ public class Parser {
   public static double performOperation(Operator.Type type, double[] operands) {  //quando ho due numeri
     return type.getFunction().apply(operands);
   }
+  public static Map<String,Double> getNextTouple(){
 
+  }
 
 }
