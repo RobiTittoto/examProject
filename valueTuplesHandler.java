@@ -3,34 +3,31 @@ import java.util.*;
 public class valueTuplesHandler {
     private enum valuesKind {
         GRID,
-        LIST;
+        LIST
 
-        @Override
-        public String toString() {
-            return super.toString();
-        }
+
     }
 
-    private List<Map<String, Double>> valueTuples;
+    private Set<Map<String, Double>> valueTuples;
     private Iterator<Map<String, Double>> iterator;
 
     public valueTuplesHandler() {
-        valueTuples = new ArrayList<>();
+        valueTuples = new HashSet<>();
     }
 
     public static valueTuplesHandler getTuplesHandler() {
         return new valueTuplesHandler();
     }
 
-    public List<Map<String, Double>> getValueTuples() {
+    public Set<Map<String, Double>> getValueTuples() {
         return valueTuples;
     }
 
-    public void setValueTuplesTuples(String variableValuesFunction, String stringValuesKind) {
+    public void setValueTuples(String variableValuesFunction, String stringValuesKind) {
         valuesKind vk;
-        if (stringValuesKind.equals("GRID")) {
+        if (stringValuesKind.equalsIgnoreCase("GRID")) {
             vk = valueTuplesHandler.valuesKind.GRID;
-        } else if ((stringValuesKind.equals("LIST"))) {
+        } else if ((stringValuesKind.equalsIgnoreCase("LIST"))) {
             vk = valueTuplesHandler.valuesKind.LIST;
         } else {
             System.out.println("Errore");
@@ -49,30 +46,30 @@ public class valueTuplesHandler {
                 //System.out.println("Aggiunto valore " + j);
             }
             if ((valueTuples.isEmpty())) {
-                for (Double value : values) {
+                for (Double aDouble : values) {
                     Map<String, Double> temp = new HashMap<>();
-                    temp.put(variableName, value);
+                    temp.put(variableName, aDouble);
                     valueTuples.add(temp);
                 }
             }
             if (vk == valuesKind.GRID) {
-                List<Map<String, Double>> grid = new ArrayList<>();
+                Set<Map<String, Double>> grid = new HashSet<>();
                 for (Map<String, Double> value : valueTuples) {
                     for (Double aDouble : values) {
                         Map<String, Double> temp = new HashMap<>(value);
                         temp.put(variableName, aDouble);
-                        //System.out.println("inserito nella lista "+ variableName + " con il valore "+values.get(i));
+                        //System.out.println("inserito nella lista "+ variableName +" con il valore "+values.get(i));
                         grid.add(temp);
                     }
                 }
                 valueTuples = grid;
             } else {
-                List<Map<String, Double>> list = new ArrayList<>();
+                Set<Map<String, Double>> list = new HashSet<>();
                 int i = 0;
                 for (Map<String, Double> value : valueTuples) {
                     Map<String, Double> temp = new HashMap<>(value);
                     temp.put(variableName, values.get(i));
-                    //System.out.println("inserito nella lista "+ variableName + " con il valore "+values.get(i));
+                    //System.out.println("inserito nella lista "+ variableName +" con il valore "+values.get(i));
                     list.add(temp);
                     i++;
                 }

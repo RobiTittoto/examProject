@@ -1,5 +1,6 @@
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -116,7 +117,8 @@ public class Parser {
     System.out.println(parser.parse());
   }
 
-  public void calcola(Operator operator){
+  public void executeExpression(Operator operator, Set<Map<String,Double>){
+    for(Map<String,Double> valueTuple : )
       if (operator.getChildren().getFirst() instanceof Constant || operator.getChildren().getFirst() instanceof Variable){
         if (operator.getChildren().get(1) instanceof Constant || operator.getChildren().get(1) instanceof Variable){
           //
