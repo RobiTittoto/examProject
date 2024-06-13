@@ -113,43 +113,44 @@ public class Parser {
     }
 
     public static void main(String[] args) {
-        Parser parser = new Parser("(x0*x1)");
+        Node parsedFunction = (new Parser("((x0+(2.0^x1))/(21.1-x0))")).parse();
         ValueTuplesHandler vtp = ValueTuplesHandler.getTuplesHandler();
-        vtp.setValueTuples("x0:-1:0.1:-0.8,x1:1:1:3","GRID");
-        Set<Map<String,Double>> prova = vtp.getValueTuples();
-        double max=-100;
-        for(Map<String,Double> aa : prova){
-            double val = parser.executeExpression(parser.parse(),aa);
-            if(val>max){
-                max=val;
+        vtp.setValueTuples("x0:-1:0.1:1,x1:-10:1:20", "GRID");
+        Set<Map<String, Double>> prova = vtp.getValueTuples();
+        double max = -100;
+        for (Map<String, Double> aa : prova) {
+            double val = executeExpression(parsedFunction, aa);
+            if (val > max) {
+                max = val;
             }
         }
         System.out.println(max);
     }
 
-    public double executeExpression(Node operator, Map<String, Double> valueTuple) {
-        cursor=0;
-        double valueFirstChild;
-        if (operator.getChildren().getFirst() instanceof Variable) {
-            valueFirstChild = valueTuple.get(((Variable) operator.getChildren().getFirst()).getName());
-        } else if (operator.getChildren().getFirst() instanceof Constant) {
-            valueFirstChild = ((Constant) operator.getChildren().getFirst()).getValue();
-        } else {
-            valueFirstChild = executeExpression(operator.getChildren().getFirst(), valueTuple);
-        }
-        double valueSecondChild;
-        if (operator.getChildren().getFirst() instanceof Variable) {
-            valueSecondChild = valueTuple.get(((Variable) operator.getChildren().get(1)).getName());
-        } else if (operator.getChildren().getFirst() instanceof Constant) {
-            valueSecondChild = ((Constant) operator.getChildren().get(1)).getValue();
-        } else {
+    public static double executeExpression(Node operator, Map<String, Double> valueTuple){
 
-            valueSecondChild = executeExpression(operator.getChildren().get(1), valueTuple);
+        //da valutare il caso in cui non sia passata un espressione ma una sola variabile
+
+        double valueFirstChild = getValue(operator.getChildren().get(0), valueTuple);
+        double valueSecondChild = getValue(operator.getChildren().get(1), valueTuple);
+
+        // Cast to Operator only after confirming it is an instance of Operator
+        if (operator instanceof Operator opt) {
+            return opt.getType().getFunction().apply(new double[]{valueFirstChild, valueSecondChild});
+        } else {
+            throw new IllegalArgumentException("Node is not an instance of Operator");
         }
-        //System.out.println(valueFirstChild +" "+ operator.getType().getSymbol()+" "+ valueSecondChild);
-        Operator opt = (Operator) operator;
-        return opt.getType().getFunction().apply(new double[]{valueFirstChild, valueSecondChild});
     }
+
+    private static double getValue(Node node, Map<String, Double> valueTuple) {
+        return switch (node) {
+            case Variable variable -> valueTuple.get(variable.getName());
+            case Constant constant -> constant.getValue();
+            case Operator operator -> executeExpression(node, valueTuple);
+            case null, default -> throw new IllegalArgumentException("Unknown Node type");
+        };
+    }
+
 
     public static double performOperation(Operator.Type type, double[] operands) {  //quando ho due numeri
         return type.getFunction().apply(operands);
