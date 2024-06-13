@@ -1,6 +1,8 @@
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 
-public class valueTuplesHandler {
+public class ValueTuplesHandler {
     private enum valuesKind {
         GRID,
         LIST
@@ -11,12 +13,12 @@ public class valueTuplesHandler {
     private Set<Map<String, Double>> valueTuples;
     private Iterator<Map<String, Double>> iterator;
 
-    public valueTuplesHandler() {
+    public ValueTuplesHandler() {
         valueTuples = new HashSet<>();
     }
 
-    public static valueTuplesHandler getTuplesHandler() {
-        return new valueTuplesHandler();
+    public static ValueTuplesHandler getTuplesHandler() {
+        return new ValueTuplesHandler();
     }
 
     public Set<Map<String, Double>> getValueTuples() {
@@ -26,9 +28,9 @@ public class valueTuplesHandler {
     public void setValueTuples(String variableValuesFunction, String stringValuesKind) {
         valuesKind vk;
         if (stringValuesKind.equalsIgnoreCase("GRID")) {
-            vk = valueTuplesHandler.valuesKind.GRID;
+            vk = ValueTuplesHandler.valuesKind.GRID;
         } else if ((stringValuesKind.equalsIgnoreCase("LIST"))) {
-            vk = valueTuplesHandler.valuesKind.LIST;
+            vk = ValueTuplesHandler.valuesKind.LIST;
         } else {
             System.out.println("Errore");
             return;
@@ -37,15 +39,14 @@ public class valueTuplesHandler {
         for (String variableInfo : variablesInfo) {
             String[] variableInfoParts = variableInfo.split(":");
             String variableName = variableInfoParts[0];
-            double firstValue = Double.parseDouble(variableInfoParts[1]);
-            double stepValue = Double.parseDouble(variableInfoParts[2]);
-            double endValue = Double.parseDouble(variableInfoParts[3]);
+            BigDecimal firstValue = new BigDecimal(variableInfoParts[1]);
+            BigDecimal stepValue = new BigDecimal(variableInfoParts[2]);
+            BigDecimal endValue = new BigDecimal(variableInfoParts[3]);
             List<Double> values = new ArrayList<>();
-            for (double j = firstValue; j <= endValue; j += stepValue) {
-                values.add(j);
-                //System.out.println("Aggiunto valore " + j);
+            for (BigDecimal j = firstValue; j.compareTo(endValue) <= 0; j = j.add(stepValue)) {
+                values.add(j.setScale(10, RoundingMode.HALF_UP).doubleValue());
             }
-            if ((valueTuples.isEmpty())) {
+            if (valueTuples.isEmpty()) {
                 for (Double aDouble : values) {
                     Map<String, Double> temp = new HashMap<>();
                     temp.put(variableName, aDouble);
@@ -58,7 +59,6 @@ public class valueTuplesHandler {
                     for (Double aDouble : values) {
                         Map<String, Double> temp = new HashMap<>(value);
                         temp.put(variableName, aDouble);
-                        //System.out.println("inserito nella lista "+ variableName +" con il valore "+values.get(i));
                         grid.add(temp);
                     }
                 }
@@ -76,7 +76,7 @@ public class valueTuplesHandler {
                 valueTuples = list;
             }
         }
-        iterator = valueTuples.iterator();
+        System.out.println(valueTuples);
     }
 
     public Map<String,Double> getNextValueTuple(){
