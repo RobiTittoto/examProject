@@ -88,21 +88,7 @@ public class Parser {
                         string.charAt(cursor)
                 ));
             }
-            Operator.Type operatorType = null;
-            String operatorString = string.substring(operatorToken.start, operatorToken.end);
-            for (Operator.Type type : Operator.Type.values()) {
-                if (operatorString.equals(Character.toString(type.getSymbol()))) {
-                    operatorType = type;
-                    break;
-                }
-            }
-            if (operatorType == null) {
-                throw new IllegalArgumentException(String.format(
-                        "Unknown operator at %d: '%s'",
-                        operatorToken.start,
-                        operatorString
-                ));
-            }
+            Operator.Type operatorType = getType(operatorToken);
             return new Operator(operatorType, Arrays.asList(child1, child2));
         }
         throw new IllegalArgumentException(String.format(
@@ -112,48 +98,23 @@ public class Parser {
         ));
     }
 
-    public static void main(String[] args) {
-        Node parsedFunction = (new Parser("((x0+(2.0^x1))/(21.1-x0))")).parse();
-        ValueTuplesHandler vtp = ValueTuplesHandler.getTuplesHandler();
-        vtp.setValueTuples("x0:-1:0.1:1,x1:-10:1:20", "GRID");
-        Set<Map<String, Double>> prova = vtp.getValueTuples();
-        double max = -100;
-        for (Map<String, Double> aa : prova) {
-            double val = executeExpression(parsedFunction, aa);
-            if (val > max) {
-                max = val;
+    private Operator.Type getType(Token operatorToken) {
+        Operator.Type operatorType = null;
+        String operatorString = string.substring(operatorToken.start, operatorToken.end);
+        for (Operator.Type type : Operator.Type.values()) {
+            if (operatorString.equals(Character.toString(type.getSymbol()))) {
+                operatorType = type;
+                break;
             }
         }
-        System.out.println(max);
-    }
-
-    public static double executeExpression(Node operator, Map<String, Double> valueTuple){
-
-        //da valutare il caso in cui non sia passata un espressione ma una sola variabile
-
-        double valueFirstChild = getValue(operator.getChildren().get(0), valueTuple);
-        double valueSecondChild = getValue(operator.getChildren().get(1), valueTuple);
-
-        // Cast to Operator only after confirming it is an instance of Operator
-        if (operator instanceof Operator opt) {
-            return opt.getType().getFunction().apply(new double[]{valueFirstChild, valueSecondChild});
-        } else {
-            throw new IllegalArgumentException("Node is not an instance of Operator");
+        if (operatorType == null) {
+            throw new IllegalArgumentException(String.format(
+                    "Unknown operator at %d: '%s'",
+                    operatorToken.start,
+                    operatorString
+            ));
         }
-    }
-
-    private static double getValue(Node node, Map<String, Double> valueTuple) {
-        return switch (node) {
-            case Variable variable -> valueTuple.get(variable.getName());
-            case Constant constant -> constant.getValue();
-            case Operator operator -> executeExpression(node, valueTuple);
-            case null, default -> throw new IllegalArgumentException("Unknown Node type");
-        };
-    }
-
-
-    public static double performOperation(Operator.Type type, double[] operands) {  //quando ho due numeri
-        return type.getFunction().apply(operands);
+        return operatorType;
     }
 
 }
