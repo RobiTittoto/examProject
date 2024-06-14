@@ -76,7 +76,6 @@ public class ExecutorLineProcessingServer {
 
 
         if (computationKind.equals("STAT")) {
-
             switch (requestInfo) {
                 case "REQS":
                     outputValue = requestCount;
