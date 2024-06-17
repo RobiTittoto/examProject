@@ -28,7 +28,7 @@ public class Parser {
             this.regex = regex;
         }
 
-        public Token next(String s, int i) {
+        private Token next(String s, int i) {
             Matcher matcher = Pattern.compile(regex).matcher(s);
             if (!matcher.find(i)) {
                 return null;
@@ -81,7 +81,7 @@ public class Parser {
             Token closedBracketToken = TokenType.CLOSED_BRACKET.next(string, cursor);
             if (closedBracketToken != null && closedBracketToken.start == cursor) {
                 cursor = closedBracketToken.end;
-            } else {                                                                           //deve esserci una parentesi chiusa
+            } else {
                 throw new IllegalArgumentException(String.format(
                         "Unexpected char at %d instead of closed bracket: '%s'",
                         cursor,

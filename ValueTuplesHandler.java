@@ -5,7 +5,7 @@ import java.util.*;
 public class ValueTuplesHandler extends HashSet<Map<String, Double>> {
 
     private Node parsedExpression;
-    NavigableSet<Double> calculatedValues = new TreeSet<>();
+    private final NavigableSet<Double> calculatedValues = new TreeSet<>();
 
     public enum valuesKind {
         GRID,
@@ -78,8 +78,13 @@ public class ValueTuplesHandler extends HashSet<Map<String, Double>> {
         }
     }
 
-    public void setExpression(String expression) {
-        this.parsedExpression = (new Parser(expression)).parse();
+    public void setExpression(String expression) throws IllegalArgumentException{
+        try{
+            this.parsedExpression = (new Parser(expression)).parse();
+        }catch(IllegalArgumentException e){
+            throw new IllegalArgumentException( String.format("%s in expression %s",e,expression));
+        }
+
         calculateValues();
     }
 
@@ -92,12 +97,18 @@ public class ValueTuplesHandler extends HashSet<Map<String, Double>> {
     }
 
 
-    private double getValue(Node node, Map<String, Double> valueTuple) {
+    private double getValue(Node node, Map<String, Double> valueTuple) throws IllegalArgumentException{
         return switch (node) {
-            case Variable variable -> valueTuple.get(variable.getName());
+            case Variable variable -> {
+                Double value = valueTuple.get(variable.getName());
+                if (value == null) {
+                    throw new IllegalArgumentException("Not found values for variable " + variable.getName());
+                }
+                yield value;
+            }
             case Constant constant -> constant.getValue();
             case Operator operator -> executeExpression(operator, valueTuple);
-            case null, default -> throw new IllegalArgumentException("Unknown Node type");
+            case null, default -> throw new IllegalArgumentException("Unknown Node type");  //questo errore non può essere generato dall'utente, come lo gestisco?
         };
     }
 
