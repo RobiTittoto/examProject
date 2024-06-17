@@ -51,7 +51,15 @@ public class Parser {
         }
     }
 
-    public Node parse() throws IllegalArgumentException {
+    public Node parse(){
+        Node parsedExpression = makeParse();
+        if( cursor!=string.length()){
+            throw new IllegalArgumentException("Invalid expression");
+        }
+        return parsedExpression;
+    }
+
+    public Node makeParse() throws IllegalArgumentException {
         Token token;
         token = TokenType.CONSTANT.next(string, cursor);
         if (token != null && token.start == cursor) {

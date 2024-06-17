@@ -78,37 +78,36 @@ public class ValueTuplesHandler extends HashSet<Map<String, Double>> {
         }
     }
 
-    public void setExpression(String expression) throws IllegalArgumentException{
-        try{
+    public void setExpression(String expression) throws IllegalArgumentException {
+        try {
             this.parsedExpression = (new Parser(expression)).parse();
-        }catch(IllegalArgumentException e){
-            throw new IllegalArgumentException( String.format("%s in expression %s",e,expression));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(String.format("%s in expression %s", e.getMessage(), expression));
         }
 
         calculateValues();
     }
 
     private void calculateValues() {
-        if (calculatedValues.isEmpty()) {
-            for (Map<String, Double> valueTuple : this) {
-                calculatedValues.add(getValue(parsedExpression, valueTuple));
-            }
+        for (Map<String, Double> valueTuple : this) {
+            calculatedValues.add(getValue(parsedExpression, valueTuple));
         }
     }
 
 
-    private double getValue(Node node, Map<String, Double> valueTuple) throws IllegalArgumentException{
+    private double getValue(Node node, Map<String, Double> valueTuple) throws IllegalArgumentException {
         return switch (node) {
             case Variable variable -> {
                 Double value = valueTuple.get(variable.getName());
                 if (value == null) {
-                    throw new IllegalArgumentException("Not found values for variable " + variable.getName());
+                    throw new IllegalArgumentException("Unvalued variable " + variable.getName());
                 }
                 yield value;
             }
             case Constant constant -> constant.getValue();
             case Operator operator -> executeExpression(operator, valueTuple);
-            case null, default -> throw new IllegalArgumentException("Unknown Node type");  //questo errore non può essere generato dall'utente, come lo gestisco?
+            case null, default ->
+                    throw new IllegalArgumentException("Unknown Node type");  //questo errore non può essere generato dall'utente, come lo gestisco?
         };
     }
 
@@ -125,18 +124,31 @@ public class ValueTuplesHandler extends HashSet<Map<String, Double>> {
     }
 
     public double getMax() {
+        if (parsedExpression == null) {
+            throw new RuntimeException("Expression not set");
+        }
+
         return calculatedValues.getLast();
     }
 
     public double getMin() {
+        if (parsedExpression == null) {
+            throw new RuntimeException("Expression not set");
+        }
         return calculatedValues.getFirst();
     }
 
     public double getCount() {
+        if (parsedExpression == null) {
+            throw new RuntimeException("Expression not set");
+        }
         return calculatedValues.size();
     }
 
     public double getAVG() {
+        if (parsedExpression == null) {
+            throw new RuntimeException("Expression not set");
+        }
         double sum = 0;
         for (Double value : calculatedValues) {
             sum += value;
