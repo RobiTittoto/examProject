@@ -1,4 +1,6 @@
+import javax.management.MalformedObjectNameException;
 import java.io.*;
+import java.lang.reflect.MalformedParametersException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -28,9 +30,10 @@ public class LineProcessingServer {
             while (true) {
                 try {
                     final Socket socket = serverSocket.accept();
-                    System.out.println("Opened connection with client " + socket.getInetAddress());
+                    System.out.printf("[%1$tY-%1$tm-%1$td %1$tT] Connection from %2$s .%n%n", System.currentTimeMillis(), socket.getInetAddress());
                     executorService.submit(() -> {
                         try (socket) {
+                            int requestsCounter = 0;
                             BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                             BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
                             while (true) {
@@ -41,11 +44,12 @@ public class LineProcessingServer {
                                     break;
                                 }
                                 if (command.equals(quitCommand)) {
-                                    System.out.println("Closed connection with client " + socket.getInetAddress());
+                                    System.out.printf("[%1$tY-%1$tm-%1$td %1$tT] Disconnection of %2$s after %3$d requests .%n\n", System.currentTimeMillis(), socket.getInetAddress(), requestsCounter);
                                     break;
                                 }
-                                bw.write(commandProcessingFunction.apply(socket.getInetAddress()+">"+command) + System.lineSeparator());
+                                bw.write(commandProcessingFunction.apply(socket.getInetAddress() + ">" + command) + System.lineSeparator());
                                 bw.flush();
+                                requestsCounter++;
                             }
                         } catch (IOException e) {
                             System.err.printf("IO error: %s", e);
@@ -62,9 +66,17 @@ public class LineProcessingServer {
 
     private String process(String requestAndIpAddress) {
         String ipAddress = requestAndIpAddress.split(">")[0];
-        String request = requestAndIpAddress.split(">")[1];
-        if(requestAndIpAddress.split(">").length != 2) {
-            System.err.println("Client "+ ipAddress +":(SyntaxError) Unknown character used in request: "+ request);
+        String request;
+        try {
+            request = requestAndIpAddress.split(">")[1];
+        } catch (ArrayIndexOutOfBoundsException e) {
+
+            System.out.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (SyntaxError) Empty request", System.currentTimeMillis(), ipAddress);
+
+            return "ERR;(SyntaxError) Empty request";
+        }
+        if (requestAndIpAddress.split(">").length != 2) {
+            System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (SyntaxError) Unknown character used", System.currentTimeMillis(), ipAddress);
             return "ERR;(SyntaxError) Unknown character used";
         }
         double startTime = System.nanoTime();
@@ -81,21 +93,22 @@ public class LineProcessingServer {
             computationKind = requestType.split("_")[0];
             requestInfo = requestType.split("_")[1];
         } catch (ArrayIndexOutOfBoundsException e) {
-            System.err.println("Client "+ ipAddress +":(SyntaxError) Missing argument in request: " + request);
+            System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (SyntaxError) Missing argument in %3$s%n", System.currentTimeMillis(), ipAddress, request);
+
             return "ERR;(SyntaxError) Missing argument";
         }
 
         if (computationKind.equals("STAT")) {
             if (requestsTimes.isEmpty()) {
-                return "ERR;(Invalid Request) No computation has ever been done";
+                System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (SyntaxError) (Invalid Request) No computation has ever been done in %3$s%n", System.currentTimeMillis(), ipAddress, request);
             }
             try {
                 if (!requestType.split("_")[2].equals("TIME")) {
-                    System.err.println("Client " + ipAddress + ": (SyntaxError) Unknown command in request: " + request);
+                    System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (SyntaxError) (SyntaxError) Unknown command in %3$s%n", System.currentTimeMillis(), ipAddress, request);
                     return "ERR;(SyntaxError) Unknown command";
                 }
             } catch (ArrayIndexOutOfBoundsException e) {
-                System.err.println("Client " + ipAddress + ": (SyntaxError) Missing argument in request:  " + request);
+                System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (SyntaxError) Missing argument in %3$s%n", System.currentTimeMillis(), ipAddress, request);
                 return "ERR;(SyntaxError) Missing argument";
             }
             switch (requestInfo) {
@@ -113,7 +126,7 @@ public class LineProcessingServer {
                     outputValue = sum / requestsTimes.size();
                     break;
                 case null, default:
-                    System.err.println("Client "+ ipAddress +": Syntax error in line" + request);
+                    System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (SyntaxError) Unknown command in %3$s%n", System.currentTimeMillis(), ipAddress, request);
                     return "ERR;(SyntaxError) Unknown command" + requestInfo;
             }
         } else if (computationKind.equals("MAX") || computationKind.equals("MIN") || computationKind.equals("AVG") || computationKind.equals("COUNT")) {
@@ -123,14 +136,21 @@ public class LineProcessingServer {
                 expressions = new String[splitRequest.length - 2];
                 System.arraycopy(splitRequest, 2, expressions, 0, expressions.length);
             } catch (ArrayIndexOutOfBoundsException e) {
-                System.err.println("Client "+ ipAddress +":(SyntaxError) Missing argument in request: " + request);
+
+                System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (SyntaxError) Missing argument in %3$s%n", System.currentTimeMillis(), ipAddress, request);
                 return "ERR;(SyntaxError) Missing argument";
             }
-            ValueTuplesHandler valueTuples = new ValueTuplesHandler(requestInfo, variableValuesFunction);
+            ValueTuplesHandler valueTuples;
+            try {
+                valueTuples = new ValueTuplesHandler(requestInfo, variableValuesFunction);
+            } catch (MalformedParametersException e) {
+                System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (SyntaxError) %3$s in %4$s%n", System.currentTimeMillis(), ipAddress, e.getMessage(), request);
+                return "ERR;(SyntaxError) " + e.getMessage();
+            }
             try {
                 valueTuples.setExpressions(expressions);
-            } catch (IllegalArgumentException e) {
-                System.err.println("Client "+ ipAddress +":(ComputationException) " + e.getMessage() + " in request: "+request);
+            } catch (IllegalArgumentException | NullPointerException e) {
+                System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (ComputationKind) %3$s in %4$s%n", System.currentTimeMillis(), ipAddress, e.getMessage(), request);
                 return "ERR;(ComputationException) " + e.getMessage();
             }
 
@@ -142,7 +162,9 @@ public class LineProcessingServer {
                 default -> outputValue;
             };
         } else {
-            System.err.println("Client "+ ipAddress +":(SyntaxError) Unknown command " + computationKind +"in request: "+ request);
+            System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (SyntaxError) Unknown command %3$s in %4$s%n", System.currentTimeMillis(), ipAddress, computationKind, request);
+
+            System.err.println("Client " + ipAddress + ":(SyntaxError) Unknown command " + computationKind + "in request: " + request);
             return "ERR;(SyntaxError) Unknown command " + computationKind;
         }
         double endTime = System.nanoTime();

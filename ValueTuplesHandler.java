@@ -1,3 +1,4 @@
+import java.lang.reflect.MalformedParametersException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
@@ -16,27 +17,49 @@ public class ValueTuplesHandler extends HashSet<Map<String, Double>> {
         super();
     }
 
-    public ValueTuplesHandler(String stringValuesKind, String variableValuesFunction) {
+    public ValueTuplesHandler(String stringValuesKind, String variableValuesFunction) throws MalformedParametersException {
         valuesKind vk;
         if (stringValuesKind.equalsIgnoreCase("GRID")) {
             vk = valuesKind.GRID;
         } else if ((stringValuesKind.equalsIgnoreCase("LIST"))) {
             vk = valuesKind.LIST;
         } else {
-            System.out.println("Errore");
-            return;
+            throw new MalformedParametersException(stringValuesKind);
         }
-        String[] variablesInfo = variableValuesFunction.split(",");
+
+        String[] variablesInfo;
+        try {
+            variablesInfo = variableValuesFunction.split(",");
+        } catch (NullPointerException e) {
+            throw new MalformedParametersException("Wrong declaration of values");
+        }
         for (String variableInfo : variablesInfo) {
-            String[] variableInfoParts = variableInfo.split(":");
-            String variableName = variableInfoParts[0];
-            BigDecimal firstValue = new BigDecimal(variableInfoParts[1]);
-            BigDecimal stepValue = new BigDecimal(variableInfoParts[2]);
-            BigDecimal endValue = new BigDecimal(variableInfoParts[3]);
+            String[] variableInfoParts;
+            String variableName;
+            BigDecimal firstValue;
+            BigDecimal stepValue;
+            BigDecimal endValue;
             List<Double> values = new ArrayList<>();
+            try {
+                variableInfoParts = variableInfo.split(":");
+                variableName = variableInfoParts[0];
+                firstValue = new BigDecimal(variableInfoParts[1]);
+                stepValue = new BigDecimal(variableInfoParts[2]);
+                endValue = new BigDecimal(variableInfoParts[3]);
+                if (firstValue.compareTo(endValue) > 0) {
+                    throw new MalformedParametersException("First value greater then end value");
+                }
+                if (stepValue.compareTo(BigDecimal.ZERO) == 0) {
+                    throw new MalformedParametersException("Invalid step value");
+                }
+
+            } catch (ArrayIndexOutOfBoundsException | NullPointerException e) {
+                throw new MalformedParametersException("Wrong declaration of values");
+            }
             for (BigDecimal j = firstValue; j.compareTo(endValue) <= 0; j = j.add(stepValue)) {
                 values.add(j.setScale(10, RoundingMode.HALF_UP).doubleValue());
             }
+
             if (this.isEmpty()) {
                 for (Double aDouble : values) {
                     Map<String, Double> temp = new HashMap<>();
@@ -46,9 +69,9 @@ public class ValueTuplesHandler extends HashSet<Map<String, Double>> {
             }
             if (vk == valuesKind.GRID) {
                 ValueTuplesHandler grid = new ValueTuplesHandler();
-                for (Map<String, java.lang.Double> value : this) {
-                    for (java.lang.Double aDouble : values) {
-                        Map<String, java.lang.Double> temp = new HashMap<>(value);
+                for (Map<String, Double> value : this) {
+                    for (Double aDouble : values) {
+                        Map<String, Double> temp = new HashMap<>(value);
                         temp.put(variableName, aDouble);
                         grid.add(temp);
                     }
@@ -61,7 +84,6 @@ public class ValueTuplesHandler extends HashSet<Map<String, Double>> {
                 for (Map<String, java.lang.Double> value : this) {
                     Map<String, java.lang.Double> temp = new HashMap<>(value);
                     temp.put(variableName, values.get(i));
-                    //System.out.println("inserito nella lista "+ variableName +" con il valore "+values.get(i));
                     list.add(temp);
                     i++;
                 }
@@ -79,12 +101,7 @@ public class ValueTuplesHandler extends HashSet<Map<String, Double>> {
     }
 
     public void setExpression(String expression) throws IllegalArgumentException {
-        try {
-            this.parsedExpression = (new Parser(expression)).parse();
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException(String.format("%s in expression %s", e.getMessage(), expression));
-        }
-
+       this.parsedExpression = (new Parser(expression)).parse();
         calculateValues();
     }
 

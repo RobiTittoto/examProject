@@ -1,6 +1,4 @@
 import java.util.Arrays;
-import java.util.Map;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,13 +48,12 @@ public class Parser {
             this.end = end;
         }
     }
-
-    public Node parse(){
-        Node parsedExpression = makeParse();
-        if( cursor!=string.length()){
-            throw new IllegalArgumentException("Invalid expression");
+    public Node parse() {
+        Node parsedString = makeParse();
+        if(cursor!=string.length()) {
+            throw new IllegalArgumentException("Poorly constructed expression " + string);
         }
-        return parsedExpression;
+        return parsedString;
     }
 
     public Node makeParse() throws IllegalArgumentException {
@@ -74,7 +71,7 @@ public class Parser {
         token = TokenType.OPEN_BRACKET.next(string, cursor);
         if (token != null && token.start == cursor) {
             cursor = token.end;
-            Node child1 = parse();
+            Node child1 = makeParse();
             Token operatorToken = TokenType.OPERATOR.next(string, cursor);
             if (operatorToken != null && operatorToken.start == cursor) {
                 cursor = operatorToken.end;
@@ -85,7 +82,7 @@ public class Parser {
                         string.charAt(cursor)
                 ));
             }
-            Node child2 = parse();
+            Node child2 = makeParse();
             Token closedBracketToken = TokenType.CLOSED_BRACKET.next(string, cursor);
             if (closedBracketToken != null && closedBracketToken.start == cursor) {
                 cursor = closedBracketToken.end;
