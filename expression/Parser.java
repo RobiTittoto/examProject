@@ -49,7 +49,7 @@ public class Parser {
     public Node parse() {
         Node parsedString = makeParse();
         if(cursor!=string.length()) {
-            throw new IllegalArgumentException("Poorly constructed expression " + string);
+            throw new IllegalArgumentException("Invalid expression " + string);
         }
         return parsedString;
     }

@@ -101,6 +101,7 @@ public class LineProcessingServer {
         if (computationKind.equals("STAT")) {
             if (requestsTimes.isEmpty()) {
                 System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (SyntaxError) (Invalid Request) No computation has ever been done in %3$s%n", System.currentTimeMillis(), ipAddress, request);
+                return "ERR;(SyntaxError) (Invalid Request) No computation has ever been done";
             }
 
             try {
@@ -164,7 +165,7 @@ public class LineProcessingServer {
                 }
 
             } catch (RuntimeException e) {
-                System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (ComputationKind) %3$s in %4$s%n", System.currentTimeMillis(), ipAddress, e.getMessage(), request);
+                System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (ComputationException) %3$s in %4$s%n", System.currentTimeMillis(), ipAddress, e.getMessage(), request);
                 return "ERR;(ComputationException) " + e.getMessage();
             }
 

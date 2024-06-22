@@ -13,7 +13,6 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 public class ValueTuplesHandler extends HashSet<Map<String, Double>> {
-
     private Node parsedExpression;
     private final NavigableSet<Double> calculatedValues = new TreeSet<>();
 
@@ -23,7 +22,6 @@ public class ValueTuplesHandler extends HashSet<Map<String, Double>> {
     }
 
     public ValueTuplesHandler() {
-        super();
     }
 
     public ValueTuplesHandler(String stringValuesKind, String variableValuesFunction) throws MalformedParametersException {
@@ -33,7 +31,7 @@ public class ValueTuplesHandler extends HashSet<Map<String, Double>> {
         } else if ((stringValuesKind.equalsIgnoreCase("LIST"))) {
             vk = valuesKind.LIST;
         } else {
-            throw new MalformedParametersException(stringValuesKind);
+            throw new MalformedParametersException("Values kind "+ stringValuesKind + "not supported");
         }
 
         String[] variablesInfo;
@@ -107,7 +105,6 @@ public class ValueTuplesHandler extends HashSet<Map<String, Double>> {
         }
     }
 
-
     public void setExpressions(String[] expressions) {
         for (String expression : expressions) {
             setExpression(expression);
@@ -116,10 +113,20 @@ public class ValueTuplesHandler extends HashSet<Map<String, Double>> {
 
     public void setExpression(String expression) throws IllegalArgumentException {
         this.parsedExpression = (new Parser(expression)).parse();
-        calculateValues();
+        try{
+            calculateValues();
+        }catch (RuntimeException e){
+            throw new MalformedParametersException(e.getMessage()+ " in expression " + expression);
+        }
     }
 
     private void calculateValues() {
+        if (this.parsedExpression == null) {
+            throw new RuntimeException("Expression is null");
+        }
+        if(this.isEmpty()){
+            throw new RuntimeException("Empty expression");
+        }
         this.stream()
                 .map(valueTuple -> getValue(parsedExpression, valueTuple))
                 .forEach(calculatedValues::add);
@@ -155,7 +162,7 @@ public class ValueTuplesHandler extends HashSet<Map<String, Double>> {
             if (Double.isInfinite(result) || Double.isNaN(result)) {
                 throw new RuntimeException("Division by zero");
             }
-            return opt.getType().getFunction().apply(new double[]{valueFirstChild, valueSecondChild});
+            return result;
         } else {
             throw new IllegalArgumentException("Node is not an instance of Operator");
         }
