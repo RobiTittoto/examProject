@@ -1,3 +1,5 @@
+package expression;
+
 import java.util.Arrays;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -32,10 +34,6 @@ public class Parser {
                 return null;
             }
             return new Token(matcher.start(), matcher.end());
-        }
-
-        public String getRegex() {
-            return regex;
         }
     }
 

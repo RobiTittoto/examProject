@@ -1,7 +1,7 @@
-import javax.management.MalformedObjectNameException;
+import valuetuples.ValueTuplesHandler;
+
 import java.io.*;
 import java.lang.reflect.MalformedParametersException;
-import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
@@ -40,7 +40,7 @@ public class LineProcessingServer {
                                 String command = br.readLine();
                                 if (command == null) {
                                     System.err.println("Client abruptly closed connection");
-                                    System.out.println("Closed connection with client " + socket.getInetAddress());
+                                    System.out.printf("[%1$tY-%1$tm-%1$td %1$tT] Disconnection of %2$s after %3$d requests .%n\n", System.currentTimeMillis(), socket.getInetAddress(), requestsCounter);
                                     break;
                                 }
                                 if (command.equals(quitCommand)) {
@@ -52,11 +52,11 @@ public class LineProcessingServer {
                                 requestsCounter++;
                             }
                         } catch (IOException e) {
-                            System.err.printf("IO error: %s", e);
+                            System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] IO error: %s %3$s", System.currentTimeMillis(), socket.getInetAddress(), e);
                         }
                     });
                 } catch (IOException e) {
-                    System.err.printf("Cannot accept connection due to %s", e);
+                    System.err.printf("[%1$tY-%1$tm-%1$td %1$tT] Cannot accept connection due to %2$s", System.currentTimeMillis(), e);
                 }
             }
         } finally {
@@ -71,7 +71,7 @@ public class LineProcessingServer {
             request = requestAndIpAddress.split(">")[1];
         } catch (ArrayIndexOutOfBoundsException e) {
 
-            System.out.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (SyntaxError) Empty request", System.currentTimeMillis(), ipAddress);
+            System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (SyntaxError) Empty request%n", System.currentTimeMillis(), ipAddress);
 
             return "ERR;(SyntaxError) Empty request";
         }
@@ -102,15 +102,25 @@ public class LineProcessingServer {
             if (requestsTimes.isEmpty()) {
                 System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (SyntaxError) (Invalid Request) No computation has ever been done in %3$s%n", System.currentTimeMillis(), ipAddress, request);
             }
+
             try {
                 if (!requestType.split("_")[2].equals("TIME")) {
-                    System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (SyntaxError) (SyntaxError) Unknown command in %3$s%n", System.currentTimeMillis(), ipAddress, request);
-                    return "ERR;(SyntaxError) Unknown command";
+                    System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (SyntaxError) Unknown command %3$s in %4$s%n", System.currentTimeMillis(), ipAddress, requestType.split("_")[2], request);
+                    return String.format("ERR;(SyntaxError) Unknown command %1$s", requestType.split("_")[2]);
+                } else {
+                    if (requestInfo.equals("REQS")) {
+                        System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (SyntaxError) Too many argument in %4$s%n", System.currentTimeMillis(), ipAddress, requestType.split("_")[2], request);
+                        return "ERR;(SyntaxError) Too many argument";
+                    }
                 }
             } catch (ArrayIndexOutOfBoundsException e) {
-                System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (SyntaxError) Missing argument in %3$s%n", System.currentTimeMillis(), ipAddress, request);
-                return "ERR;(SyntaxError) Missing argument";
+                if (!requestInfo.equals("REQS")) {
+                    System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (SyntaxError) Missing argument in %3$s%n", System.currentTimeMillis(), ipAddress, request);
+                    return "ERR;(SyntaxError) Missing argument";
+                }
+
             }
+
             switch (requestInfo) {
                 case "REQS":
                     outputValue = requestsTimes.size();
@@ -143,13 +153,17 @@ public class LineProcessingServer {
             ValueTuplesHandler valueTuples;
             try {
                 valueTuples = new ValueTuplesHandler(requestInfo, variableValuesFunction);
+
             } catch (MalformedParametersException e) {
                 System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (SyntaxError) %3$s in %4$s%n", System.currentTimeMillis(), ipAddress, e.getMessage(), request);
                 return "ERR;(SyntaxError) " + e.getMessage();
             }
             try {
-                valueTuples.setExpressions(expressions);
-            } catch (IllegalArgumentException | NullPointerException e) {
+                if (!computationKind.equals("COUNT")) {
+                    valueTuples.setExpressions(expressions);
+                }
+
+            } catch (RuntimeException e) {
                 System.err.printf("[%1$tY-%1$tm-%1$td %1$tT from %2$s] (ComputationKind) %3$s in %4$s%n", System.currentTimeMillis(), ipAddress, e.getMessage(), request);
                 return "ERR;(ComputationException) " + e.getMessage();
             }
@@ -157,7 +171,7 @@ public class LineProcessingServer {
             outputValue = switch (computationKind) {
                 case "MIN" -> valueTuples.getMin();
                 case "MAX" -> valueTuples.getMax();
-                case "COUNT" -> valueTuples.getCount();
+                case "COUNT" -> valueTuples.size();
                 case "AVG" -> valueTuples.getAVG();
                 default -> outputValue;
             };
@@ -171,7 +185,7 @@ public class LineProcessingServer {
         double responseTime = (endTime - startTime) / 1_000_000_000.0;
         requestsTimes.add(responseTime);
 
-        response = "OK;" + responseTime + ";" + outputValue;
+        response = String.format("OK;%.3f;%.6f", responseTime, outputValue);
         return response;
     }
 }

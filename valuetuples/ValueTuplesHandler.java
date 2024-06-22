@@ -1,7 +1,16 @@
+package valuetuples;
+
+import expression.Node;
+import expression.Operator;
+import expression.Variable;
+import expression.Constant;
+import expression.Parser;
+
 import java.lang.reflect.MalformedParametersException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class ValueTuplesHandler extends HashSet<Map<String, Double>> {
 
@@ -43,6 +52,11 @@ public class ValueTuplesHandler extends HashSet<Map<String, Double>> {
             try {
                 variableInfoParts = variableInfo.split(":");
                 variableName = variableInfoParts[0];
+                if (!Pattern.compile("[a-z][a-z0-9]*").matcher(variableName).find()) {
+                    throw new MalformedParametersException(variableName + " is not a valid variable name");
+                }
+
+
                 firstValue = new BigDecimal(variableInfoParts[1]);
                 stepValue = new BigDecimal(variableInfoParts[2]);
                 endValue = new BigDecimal(variableInfoParts[3]);
@@ -101,16 +115,19 @@ public class ValueTuplesHandler extends HashSet<Map<String, Double>> {
     }
 
     public void setExpression(String expression) throws IllegalArgumentException {
-       this.parsedExpression = (new Parser(expression)).parse();
+        this.parsedExpression = (new Parser(expression)).parse();
         calculateValues();
     }
 
     private void calculateValues() {
-        for (Map<String, Double> valueTuple : this) {
-            calculatedValues.add(getValue(parsedExpression, valueTuple));
-        }
+        this.stream()
+                .map(valueTuple -> getValue(parsedExpression, valueTuple))
+                .forEach(calculatedValues::add);
     }
 
+    public NavigableSet<Double> getCalculatedValues() {
+        return calculatedValues;
+    }
 
     private double getValue(Node node, Map<String, Double> valueTuple) throws IllegalArgumentException {
         return switch (node) {
@@ -132,8 +149,12 @@ public class ValueTuplesHandler extends HashSet<Map<String, Double>> {
 
         double valueFirstChild = getValue(operator.getChildren().get(0), valueTuple);
         double valueSecondChild = getValue(operator.getChildren().get(1), valueTuple);
-        // Cast to Operator only after confirming it is an instance of Operator
+
         if (operator instanceof Operator opt) {
+            Double result = opt.getType().getFunction().apply(new double[]{valueFirstChild, valueSecondChild});
+            if (Double.isInfinite(result) || Double.isNaN(result)) {
+                throw new RuntimeException("Division by zero");
+            }
             return opt.getType().getFunction().apply(new double[]{valueFirstChild, valueSecondChild});
         } else {
             throw new IllegalArgumentException("Node is not an instance of Operator");
@@ -155,13 +176,6 @@ public class ValueTuplesHandler extends HashSet<Map<String, Double>> {
         return calculatedValues.getFirst();
     }
 
-    public double getCount() {
-        if (parsedExpression == null) {
-            throw new RuntimeException("Expression not set");
-        }
-        return calculatedValues.size();
-    }
-
     public double getAVG() {
         if (parsedExpression == null) {
             throw new RuntimeException("Expression not set");
@@ -171,5 +185,18 @@ public class ValueTuplesHandler extends HashSet<Map<String, Double>> {
             sum += value;
         }
         return sum / calculatedValues.size();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof ValueTuplesHandler) {
+            return ((ValueTuplesHandler) o).getCalculatedValues().equals(calculatedValues);
+        }
+        return  false;
+    }
+
+    @Override
+    public String toString() {
+        return super.toString() + "\n" + calculatedValues;
     }
 }
